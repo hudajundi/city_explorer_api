@@ -1,6 +1,6 @@
 let express = require('express');
 let cors = require('cors');
-const { response } = require('express');
+const superagent = require('superagent');
 
 
 
@@ -17,18 +17,18 @@ app.get('/location' , handleLocation);
 
 
 function handleLocation(req,res){
-    try{
     let city = req.query.city;
-    let jsonData = require('./data/lacation.json');
-    let jsonObject = jsonData[0];
-    let locationObject = new Location (city, jsonObject.display_name, jsonObject.lat, jsonObject.lon);
-    
-    res.status(200).json(locationObject);
-    }
-    catch(error){
-        response.status(500).send('Sorry, something went wrong');
+    let key= process.env.GEOCODE_API_KEY;
+    superagent.get(``) . then((data)=>{        //////NOTE:  I didn't understand how to get the link and the key 
+    let jsonObject = data.body[0];
+    console.log(jsonObject);
+    let locationObject = new Location (city, jsonObject.display_name, jsonObject.lat, jsonObject.lon)
+     res.status(200).json(locationObject);
 
-    }
+    
+}) .catch(()=>{
+    res.wend('error.....');
+});
 }
 
 
@@ -59,7 +59,11 @@ function handleWeather(request,response){
          arrOfDays.push(weatherObject);
         });
 
-        response.status(200).send(arrOfDays);
+        //////// to add .map/////
+
+        // response.status(200).send(arrOfDays);          /// we use instead:
+        response.status(200).json(wetherdata.body.data.map(); 
+        
         
     }
     catch(error){
