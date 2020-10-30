@@ -2,11 +2,13 @@
 
 let express = require('express');
 let cors = require('cors');
+
 let superagent = require('superagent');
 let pg = require('pg');
 
 require('dotenv').config();
 const PORT = process.env.PORT;
+
 
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -95,6 +97,7 @@ function Location(search_query, formatted_query, latitude, longitude) { // so th
 
 
 
+
 /////////////////////////weather///////////////////
 
 app.get('/weather', handleWeather);
@@ -119,11 +122,17 @@ function handleWeather(req, res) {
 
     });
 
-}
+
+        .catch(e => {
+            res.send('error.....', e.message);
+        });
+    console.log('testing the promise')
+
 
 
 function Weather(forecast, time) {
     this.forecast = forecast;
+
 
     this.time = new Date(time).toDateString();
 }
@@ -174,11 +183,6 @@ function handleTrail(req,res) {
         })
      
 });
-}
-// trial cons: 
-
-
-
 
 
 
@@ -194,5 +198,5 @@ client.connect().then(()=>{
  
 }).catch(err =>{
     console.log('somtheing is wrong', err);
-});
 
+    
