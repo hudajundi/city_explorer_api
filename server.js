@@ -1,18 +1,25 @@
+//the require things , just memorize + install from trminal
+
 let express = require('express');
 let cors = require('cors');
-const superagent = require('superagent');
 
+let superagent = require('superagent');
+let pg = require('pg');
+
+require('dotenv').config();
+const PORT = process.env.PORT;
+
+
+
+const DATABASE_URL = process.env.DATABASE_URL;
+let client = new pg.Client(DATABASE_URL);
 
 
 let app = express();
 app.use(cors());
 
-require('dotenv').config();
 
-const PORT = process.env.PORT;
-
-
-app.get('/location', handleLocation);
+//just to test
 app.get('/', test)
 
 function test(req, res) {
@@ -21,11 +28,47 @@ function test(req, res) {
 
 
 
+
+//////////////location//////////////////////
+
+app.get('/location', handleLocation);
+
+
 function handleLocation(req, res) {
-    let city = req.query.city;
+let city = req.query.city;
+////from database///
+
+getDataFromDatabase(city).then((result)=>{
+     if(result.rowCount > 0 ){
+         let dbLoc = result.rows[0];
+         let locationObject = new Location(dbLoc.search_query, dbLoc.formatted_query, dbLoc.latitude, dbLoc.longitude);
+         res.json(locationObject);
+     } else {
+         //// from API/////
+         getLocationFromAPI(city, res).then(data=>{
+             console.log('data in line 28',data);
+             addLocationToDatabase(data);
+             res.json(data);
+         });
+     }
+    });
+
+}
+
+function getDataFromDatabase(){
+    let query = 'SELECT * FROM locations WHERE search_query = $1';
+    let values = [city];
+
+    return client.query(query, values).then(result =>{
+        // console.log(result);
+        return result;
+    })
+}
+
+function getLocationFromAPI(city, res){
     let key = process.env.GEOCODE_API_KEY;
     superagent.get(`https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json`)
-        .then((data) => {        //////NOTE:  I didn't understand how to get the link and the key
+        .then((data) => {        
             console.log('data', data.body[0])
             let jsonObject = data.body[0];
             console.log(jsonObject);
@@ -40,8 +83,6 @@ function handleLocation(req, res) {
     console.log('testing the promise')
 }
 
-
-
 function Location(search_query, formatted_query, latitude, longitude) { // so the data look like the client wants 
     this.search_query = search_query;
     this.formatted_query = formatted_query;
@@ -50,7 +91,15 @@ function Location(search_query, formatted_query, latitude, longitude) { // so th
 }
 
 
-/////////weather//////
+
+
+
+
+
+
+
+/////////////////////////weather///////////////////
+
 app.get('/weather', handleWeather);
 
 
@@ -59,33 +108,41 @@ function handleWeather(req, res) {
     let city = req.query.city;
     let keyWeth = process.env.WETHCODE_API_KEY;
 
-    let arrOfDays = [];
+    // let arrOfDays = [];
 
     superagent.get(`https://api.weatherbit.io/v2.0/forecast/daily?city=${city}&key=${keyWeth}`)
-        .then((data) => {  
+        .then((result) => {  
 
-    let JsonWatherObject = data.body[0];
+//////// to add .map/////
+    let JsonWatherObject = result.body.data.map((dataWeather)=>{
+        return new Weather(dataWeather);
+    });
 
-      JsonWatherData.forEach((value) => {
-          let weatherObject = new Weather(value.weather.description, value.valid_date);
-          arrOfDays.push(weatherObject);
-       });
-
-        //////// to add .map/////
-
-        // response.status(200).send(arrOfDays);          /// we use instead:
-        // response.status(200).json(wetherdata.body.data.map(arrOfDays));
-
+      res.status(200).json(JsonWatherObject);
 
     });
-}
+
+
+        .catch(e => {
+            res.send('error.....', e.message);
+        });
+    console.log('testing the promise')
+
 
 
 function Weather(forecast, time) {
     this.forecast = forecast;
 
+
     this.time = new Date(time).toDateString();
 }
+
+
+
+
+
+
+
 /////////trail///////
 app.get('/trails',handleTrail);
 function Trail(tObject) {
@@ -126,8 +183,6 @@ function handleTrail(req,res) {
         })
      
 });
-}
-// trial cons: 
 
 
 
@@ -135,5 +190,13 @@ function handleTrail(req,res) {
 
 
 
-app.listen(PORT, () => console.log(`app is listening on port ${PORT}`));
+client.connect().then(()=>{
+   app.listen(PORT, () =>{
 
+   console.log(`app is listening on port ${PORT}`)
+   }); 
+ 
+}).catch(err =>{
+    console.log('somtheing is wrong', err);
+
+    
