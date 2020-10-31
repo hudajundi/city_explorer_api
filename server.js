@@ -80,7 +80,7 @@ function getLocationFromAPI(city, res){
         .catch(e => {
             res.send('error.....', e.message);
         });
-    console.log('testing the promise')
+    console.log('testing the promise');
 }
 
 function Location(search_query, formatted_query, latitude, longitude) { // so the data look like the client wants 
@@ -89,6 +89,74 @@ function Location(search_query, formatted_query, latitude, longitude) { // so th
     this.latitude = latitude;
     this.longitude = longitude;
 }
+
+
+
+
+/////////movies////////////
+app.get('/movies', handleMovie);
+const MOVIE_API_KEY= process.env.MOVIE_API_KEY;
+function handleMovie(city,res){
+superagent.get(`https://api.themoviedb.org/3/movie/76341?api_key=${MOVIE_API_KEY}`)
+.then(data =>{
+    let dataMovie = data.body.results;
+            // console.log(dataMovie);
+            let arr = dataMovie.map(element => {
+                return new Movie(element);
+                // console.log(arr);
+            });
+            res.status(200).json(arr);
+        }).catch(err => {
+            res.status(500).send(' sorry.... error', err);
+        });
+
+
+}
+
+
+
+////movie cons :
+function Movie(movieObj) {
+    this.title = movieObj.title;
+    this.overview = movieObj.overview;
+    this.average_votes = movieObj.vote_average;
+    this.total_votes = movieObj.vote_count;
+    this.image_url = `https://image.tmdb.org/t/p/w500${movieObj.poster_path}`;
+    this.popularity = movieObj.popularity;
+    this.released_on = movieObj.release_date;
+}
+
+
+
+
+
+///////////////////yelp////////////
+app.get('/yelp', handleYelp);
+const YELP_API_KEY= process.env.YELP_API_KEY;
+
+function handleYelp(req,res){
+
+superagent.get(`https://api.yelp.com/v3/businesses/search`)
+
+    .then((data) => {
+        const dataYelp = data.body.businesses.map((yelpData) => {
+          return new Yelp(yelpData);
+        });
+        return dataYelp;
+}
+
+
+
+
+
+
+function Yelp(yelpObj){
+    this.name = yelpObj.name;
+  this.image_url = yelpObj.image_url;
+  this.price = yelpObj.price;
+  this.rating = yelpObj.rating;
+  this.url = yelpObj.url;
+},
 
 
 
@@ -106,7 +174,7 @@ app.get('/weather', handleWeather);
 function handleWeather(req, res) {
 
     let city = req.query.city;
-    let keyWeth = process.env.WETHCODE_API_KEY;
+    let keyWeth = process.env.WEATHER_API_KEY;
 
     // let arrOfDays = [];
 
@@ -120,13 +188,14 @@ function handleWeather(req, res) {
 
       res.status(200).json(JsonWatherObject);
 
-    });
+    })
 
 
         .catch(e => {
             res.send('error.....', e.message);
         });
-    console.log('testing the promise')
+    console.log('testing the promise');
+}
 
 
 
@@ -179,11 +248,11 @@ function handleTrail(req,res) {
         let value=JsonTrailObject.map(element=>{
             return new Trail(element);
         }).catch(()=>{
-            res.status(500).send('sorry,,, wrong')
-        })
+            res.status(500).send('sorry,,, wrong');
+        });
      
 });
-
+}
 
 
 
@@ -199,4 +268,5 @@ client.connect().then(()=>{
 }).catch(err =>{
     console.log('somtheing is wrong', err);
 
-    
+})
+}
