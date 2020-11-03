@@ -31,16 +31,22 @@ function test(req, res) {
 
 
 
+//////////////////the "get" functions part:
+app.get('/location', handleLocation);
+app.get('/weather', handleWeather);
+app.get('/movies', handleMovie);
+app.get('/yelp', handleYelp);
+app.get('/trails', handleTrail);
+
+
+
+
 
 //////////////location//////////////////////
-
-app.get('/location', handleLocation);
-
-
 function handleLocation(req, res) {
     let city = req.query.city;
     let query = 'SELECT * FROM locations WHERE search_query = $1';
-    let values = [city]
+    let values = [city];
     client.query(query, values).then((data) => {
         if (data.rowCount > 0) {
             res.json(data.rows[0])
@@ -60,63 +66,12 @@ function handleLocation(req, res) {
                         }) .catch(e => {
                             res.send('error.....', e.message);
                         });
-                        // res.status(200).json(locationObject);
-        
-        
-                    })
-                   
-                console.log('testing the promise');
-            }
-
-        
-
-
+                        
+            })
+        }
     })
-}
-    // getDataFromDatabase(city).then((result)=>{
-    //      if(result.rowCount > 0 ){
-    //          let dbLoc = result.rows[0];
-    //          let locationObject = new Location(dbLoc.search_query, dbLoc.formatted_query, dbLoc.latitude, dbLoc.longitude);
-    //          res.json(locationObject);
-    //      } else {
-    //          //// from API/////
-    //          getLocationFromAPI(city, res).then(data=>{
-    //              console.log('data in line 28',data);
-    //              addLocationToDatabase(data);
-    //              res.json(data);
-    //          });
-    //      }
-    //     });
-
-
-
-    // function getDataFromDatabase(){
-    //     let query = 'SELECT * FROM locations WHERE search_query = $1';
-    //     let values = [city];
-
-    //     return client.query(query, values).then(result =>{
-    //         // console.log(result);
-    //         return result;
-    //     })
-    // }
-
-    // function getLocationFromAPI(city, res){
-    //     let key = process.env.GEOCODE_API_KEY;
-    //     superagent.get(`https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json`)
-    //         .then((data) => {        
-    //             console.log('data', data.body[0])
-    //             let jsonObject = data.body[0];
-    //             console.log(jsonObject);
-    //             let locationObject = new Location(city, jsonObject.display_name, jsonObject.lat, jsonObject.lon)
-    //             res.status(200).json(locationObject);
-
-
-    //         })
-    //         .catch(e => {
-    //             res.send('error.....', e.message);
-    //         });
-    //     console.log('testing the promise');
-    // }
+}    
+    
 
     function Location(search_query, formatted_query, latitude, longitude) { // so the data look like the client wants 
         this.search_query = search_query;
@@ -129,9 +84,10 @@ function handleLocation(req, res) {
 
 
     /////////movies////////////
-    app.get('/movies', handleMovie);
+    function handleMovie(req, res) {
+        let city = req.query.city;
     const MOVIE_API_KEY = process.env.MOVIE_API_KEY;
-    function handleMovie(city, res) {
+
         superagent.get(`https://api.themoviedb.org/3/movie/76341?api_key=${MOVIE_API_KEY}`)
             .then(data => {
                 let dataMovie = data.body.results;
@@ -140,7 +96,7 @@ function handleLocation(req, res) {
                     return new Movie(element);
                     // console.log(arr);
                 });
-                res.status(200).json(arr);
+                res.send(arr);
             }).catch(err => {
                 res.status(500).send(' sorry.... error', err);
             });
@@ -159,6 +115,8 @@ function handleLocation(req, res) {
         this.image_url = `https://image.tmdb.org/t/p/w500${movieObj.poster_path}`;
         this.popularity = movieObj.popularity;
         this.released_on = movieObj.release_date;
+        this.created_at = Date.now();
+
     }
 
 
@@ -166,25 +124,21 @@ function handleLocation(req, res) {
 
 
     ///////////////////yelp////////////
-    app.get('/yelp', handleYelp);
-    const YELP_API_KEY = process.env.YELP_API_KEY;
+    
 
     function handleYelp(req, res) {
+        let city = req.query.city;
+const YELP_API_KEY = process.env.YELP_API_KEY;
 
-        superagent.get(`https://api.yelp.com/v3/businesses/search`)
+        superagent.get(`https://api.yelp.com/v3/businesses/search?location=${city}`).set('Authorization', `Bearer ${YELP_API_KEY}`)
 
             .then((data) => {
                 const dataYelp = data.body.businesses.map((yelpData) => {
                     return new Yelp(yelpData);
                 });
                 return dataYelp;
-            })
+            });
         }
-
-
-
-
-
 
         function Yelp(yelpObj) {
             this.name = yelpObj.name;
@@ -196,42 +150,35 @@ function handleLocation(req, res) {
 
 
 
-
-
-
-
-
-
         /////////////////////////weather///////////////////
-
-        app.get('/weather', handleWeather);
-
-
-        function handleWeather(req, res) {
-
-            let city = req.query.city;
+         function handleWeather(req, res) {
+             let city = req.query.city;
             let keyWeth = process.env.WEATHER_API_KEY;
-
-            // let arrOfDays = [];
-
+        
+        
             superagent.get(`https://api.weatherbit.io/v2.0/forecast/daily?city=${city}&key=${keyWeth}`)
-                .then((result) => {
+                
+                .then(data => {
+                    let weatherObject = data.body.data;
+                    let weatherArr= [];
+                    weatherObject.forEach(element => {
+                        let toDate = element.datetime;
+                        var options = { weekday: 'short', year: 'numeric', day: '2-digit', month: '2-digit' };
+                        var today = new Date(toDate);
+                        console.log(today.toDateString("en-US", options));
+                        let dateFormatted = today.toDateString("en-US", options);
+                        let weatherObjCons = new Weather(element.weather.description, dateFormatted);
+                        weatherArr.push(weatherObjCons);
 
-                    //////// to add .map/////
-                    let JsonWatherObject = result.body.data.map((dataWeather) => {
-                        return new Weather(dataWeather);
-                    });
-
-                    res.status(200).json(JsonWatherObject);
+                    res.status(200).json(wetherArr);
 
                 })
-
-
                 .catch(e => {
                     res.send('error.....', e.message);
                 });
             console.log('testing the promise');
         }
+                )}
 
 
 
@@ -249,7 +196,6 @@ function handleLocation(req, res) {
 
 
         /////////trail///////
-        app.get('/trails', handleTrail);
         function Trail(tObject) {
 
             this.name = tObject.name;
@@ -269,25 +215,28 @@ function handleLocation(req, res) {
             let lato = req.query.latitude;
             let long = req.query.longitude;
 
-
+            let SQL1 = `SELECT * FROM trails WHERE latitude='${lato}' AND longitude='${long}';`;
+            client.query(SQL1)
+            .then(results=>{
+              if(results.rows.length == 0){
             superagent.get(`https://www.hikingproject.com/data/get-trails?lat=${lato}&lon=${long}&maxDistance=200&key=${keyT}`)
-                .then(data => {
-                    let JsonTrailObject = data.body.trails;
 
 
-                    //   JsonWatherData.forEach((value) => {
-                    //       let weatherObject = new Weather(value.weather.description, value.valid_date);
-                    //       arrOfDays.push(weatherObject);
-                    //    });
+                .then(traildata => {
+                    res.status(200).json(traildata.body.trails.map(item => {
+                        const SQL = `INSERT INTO trails (name, location, length, stars, star_votes, summary, trail_url, conditions, condition_date, condition_time, latitude, longitude) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+                        const safeValues = [item.name, item.location, item.length, item.stars, item.starVotes, item.summary, item.url, `${item.conditions}: The trail is ${item.conditionStatus}`, item.conditionDate.split(' ')[0], item.conditionDate.split(' ')[1], lat, lon]
+                        client.query(SQL,safeValues)     
+                        return new Trail(item)
+                    }))
+                })
+              }else{
+                res.status(200).json(results.rows);
+              }
+            })
 
 
-                    let value = JsonTrailObject.map(element => {
-                        return new Trail(element);
-                    }).catch(() => {
-                        res.status(500).send('sorry,,, wrong');
-                    });
-
-                });
+    
         }
 
 
@@ -302,4 +251,4 @@ function handleLocation(req, res) {
         client.connect().then(startServer)
             .catch((err) => console.log('somtheing is wrong', err));
 
-
+    
