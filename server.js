@@ -1,3 +1,7 @@
+'use strict';
+
+
+///////the require/////
 let express = require('express');
 let cors = require('cors');
 const superagent = require('superagent');
@@ -12,12 +16,16 @@ require('dotenv').config();
 const PORT = process.env.PORT;
 
 
-app.get('/location', handleLocation);
+
+///////the test
 app.get('/', test)
 
 function test(req, res) {
     res.send('I am Alive')
 }
+
+////////location
+app.get('/location', handleLocation);
 
 
 
